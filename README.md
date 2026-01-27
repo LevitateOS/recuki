@@ -55,7 +55,7 @@ build_uki(&config)?;
 
 - Sign the UKI (use `sbsign` separately)
 - Install to ESP (copy it yourself)
-- Generate initramfs (use `dracut` or similar)
+- Generate initramfs (use `recinit`)
 
 ## Requirements
 
