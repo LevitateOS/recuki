@@ -1,0 +1,29 @@
+[package]
+name = "recuki"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.93"
+description = "Build Unified Kernel Images (UKI) from kernel + initramfs + cmdline"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/LevitateOS/recuki"
+homepage = "https://github.com/LevitateOS/recuki"
+documentation = "https://github.com/LevitateOS/recuki#readme"
+readme = "README.md"
+keywords = ["uki", "linux", "boot", "efi", "ukify"]
+categories = ["command-line-utilities", "filesystem"]
+authors = ["LevitateOS Contributors"]
+exclude = [
+    ".github/*",
+    "CLAUDE.md",
+]
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.4", features = ["derive"] }
+
+[dev-dependencies]
+leviso-cheat-test = { path = "../../testing/cheat-test" }
+
+[profile.release]
+strip = true
+lto = true
