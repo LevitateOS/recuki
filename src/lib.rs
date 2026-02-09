@@ -115,8 +115,9 @@ pub fn build_uki(config: &UkiConfig) -> Result<()> {
     // Ensure output directory exists
     if let Some(parent) = config.output.parent() {
         if !parent.as_os_str().is_empty() && !parent.exists() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create output directory: {}", parent.display()))?;
+            std::fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create output directory: {}", parent.display())
+            })?;
         }
     }
 
@@ -171,12 +172,7 @@ pub fn build_uki(config: &UkiConfig) -> Result<()> {
 /// Build a UKI with minimal arguments.
 ///
 /// Convenience wrapper around [`build_uki`] for simple cases.
-pub fn build_uki_simple(
-    kernel: &Path,
-    initrd: &Path,
-    cmdline: &str,
-    output: &Path,
-) -> Result<()> {
+pub fn build_uki_simple(kernel: &Path, initrd: &Path, cmdline: &str, output: &Path) -> Result<()> {
     let config = UkiConfig::new(kernel, initrd, cmdline, output);
     build_uki(&config)
 }
@@ -193,8 +189,8 @@ pub fn build_uki_branded(
     os_id: &str,
     os_version: &str,
 ) -> Result<()> {
-    let config = UkiConfig::new(kernel, initrd, cmdline, output)
-        .with_os_release(os_name, os_id, os_version);
+    let config =
+        UkiConfig::new(kernel, initrd, cmdline, output).with_os_release(os_name, os_id, os_version);
     build_uki(&config)
 }
 
