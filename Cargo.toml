@@ -23,7 +23,3 @@ clap = { version = "4.4", features = ["derive"] }
 
 [dev-dependencies]
 leviso-cheat-test = { path = "../../testing/cheat-test" }
-
-[profile.release]
-strip = true
-lto = true
