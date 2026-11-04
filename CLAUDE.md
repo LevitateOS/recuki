@@ -24,7 +24,7 @@ UKIs combine kernel + initramfs + cmdline into a single PE binary. This simplifi
 
 ```bash
 cargo build --release
-cargo test
+cargo check # Unit tests are prohibited; use focused integration/runtime checks.
 ```
 
 ## Usage
