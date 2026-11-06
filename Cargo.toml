@@ -1,21 +1,11 @@
 [package]
 name = "recuki"
-version = "0.1.0"
-edition = "2021"
-rust-version = "1.93"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
 description = "Build Unified Kernel Images (UKI) from kernel + initramfs + cmdline"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/LevitateOS/recuki"
-homepage = "https://github.com/LevitateOS/recuki"
-documentation = "https://github.com/LevitateOS/recuki#readme"
-readme = "README.md"
-keywords = ["uki", "linux", "boot", "efi", "ukify"]
-categories = ["command-line-utilities", "filesystem"]
-authors = ["LevitateOS Contributors"]
-exclude = [
-    ".github/*",
-    "CLAUDE.md",
-]
 
 [dependencies]
 anyhow = "1.0"
