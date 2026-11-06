@@ -31,6 +31,32 @@ pub struct OsRelease {
     pub version: String,
 }
 
+/// The `--os-name`/`--os-id`/`--os-version` arguments, all or none, for
+/// every CLI that brands a UKI.
+#[derive(Debug, Clone, clap::Args)]
+pub struct OsReleaseArgs {
+    /// OS name for the boot menu (e.g., "LevitateOS")
+    #[arg(long = "os-name", requires_all = ["os_id", "os_version"])]
+    pub os_name: Option<String>,
+
+    /// OS identifier (e.g., "levitateos")
+    #[arg(long = "os-id", requires_all = ["os_name", "os_version"])]
+    pub os_id: Option<String>,
+
+    /// OS version (e.g., "1.0")
+    #[arg(long = "os-version", requires_all = ["os_name", "os_id"])]
+    pub os_version: Option<String>,
+}
+
+impl OsReleaseArgs {
+    pub fn os_release(&self) -> Option<OsRelease> {
+        match (&self.os_name, &self.os_id, &self.os_version) {
+            (Some(name), Some(id), Some(version)) => Some(OsRelease::new(name, id, version)),
+            _ => None,
+        }
+    }
+}
+
 impl UkiConfig {
     pub fn new(
         kernel: impl Into<PathBuf>,

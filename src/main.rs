@@ -7,7 +7,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
 
-use recuki::{build_uki, OsRelease, UkiConfig};
+use recuki::{build_uki, OsReleaseArgs, UkiConfig};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -45,17 +45,8 @@ struct Args {
     #[arg(short = 'o', long = "output")]
     output: PathBuf,
 
-    /// OS name for boot menu display (e.g., "LevitateOS")
-    #[arg(long = "os-name", requires_all = ["os_id", "os_version"])]
-    os_name: Option<String>,
-
-    /// OS identifier (e.g., "levitateos")
-    #[arg(long = "os-id", requires_all = ["os_name", "os_version"])]
-    os_id: Option<String>,
-
-    /// OS version (e.g., "1.0")
-    #[arg(long = "os-version", requires_all = ["os_name", "os_id"])]
-    os_version: Option<String>,
+    #[command(flatten)]
+    os: OsReleaseArgs,
 
     /// Quiet mode - only print errors
     #[arg(short = 'q', long = "quiet")]
@@ -67,9 +58,7 @@ fn main() -> Result<()> {
 
     let mut config = UkiConfig::new(&args.kernel, &args.initrd, &args.cmdline, &args.output);
 
-    if let (Some(name), Some(id), Some(version)) = (&args.os_name, &args.os_id, &args.os_version) {
-        config.os_release = Some(OsRelease::new(name, id, version));
-    }
+    config.os_release = args.os.os_release();
 
     if !args.quiet {
         println!("Building UKI: {}", args.output.display());
