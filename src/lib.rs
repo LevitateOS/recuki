@@ -1,21 +1,18 @@
 //! recuki - Unified Kernel Image (UKI) builder.
 //!
-//! Builds UKIs using `ukify` from systemd. UKIs combine kernel + initramfs + cmdline
-//! into a single signed PE binary for simplified boot and Secure Boot support.
-//!
+//! Builds UKIs using `ukify` from systemd. A UKI combines kernel + initramfs +
+//! cmdline into one PE binary, so Secure Boot has a single file to sign (recuki
+//! itself does not sign).
 
 use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::process::Command;
 
-/// Configuration for building a UKI.
 #[derive(Debug, Clone)]
 pub struct UkiConfig {
     /// Path to the kernel image (vmlinuz).
     pub kernel: PathBuf,
-    /// Path to the initramfs image.
     pub initrd: PathBuf,
-    /// Kernel command line string.
     pub cmdline: String,
     /// Output path for the .efi file.
     pub output: PathBuf,
@@ -35,7 +32,6 @@ pub struct OsRelease {
 }
 
 impl UkiConfig {
-    /// Create a new UKI configuration.
     pub fn new(
         kernel: impl Into<PathBuf>,
         initrd: impl Into<PathBuf>,
@@ -53,7 +49,6 @@ impl UkiConfig {
 }
 
 impl OsRelease {
-    /// Create a new OS release configuration.
     pub fn new(name: impl Into<String>, id: impl Into<String>, version: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -74,8 +69,6 @@ impl OsRelease {
     }
 }
 
-/// Build a UKI from the given configuration.
-///
 /// Uses `ukify` from systemd. Requires systemd-ukify to be installed.
 ///
 /// # Errors
@@ -83,10 +76,9 @@ impl OsRelease {
 /// Returns an error if:
 /// - `ukify` is not installed
 /// - The kernel or initrd files don't exist
-/// - The output directory doesn't exist
+/// - The output directory cannot be created
 /// - `ukify` fails to build the UKI
 pub fn build_uki(config: &UkiConfig) -> Result<()> {
-    // Validate inputs exist
     if !config.kernel.exists() {
         bail!("Kernel not found: {}", config.kernel.display());
     }
@@ -94,7 +86,6 @@ pub fn build_uki(config: &UkiConfig) -> Result<()> {
         bail!("Initrd not found: {}", config.initrd.display());
     }
 
-    // Ensure output directory exists
     if let Some(parent) = config.output.parent() {
         if !parent.as_os_str().is_empty() && !parent.exists() {
             std::fs::create_dir_all(parent).with_context(|| {
