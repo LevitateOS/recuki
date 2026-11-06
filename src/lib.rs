@@ -3,17 +3,9 @@
 //! Builds UKIs using `ukify` from systemd. UKIs combine kernel + initramfs + cmdline
 //! into a single signed PE binary for simplified boot and Secure Boot support.
 //!
-//! # Example
-//!
-//! ```ignore
-//! use recuki::{UkiConfig, build_uki};
-//!
-//! let config = UkiConfig::new("vmlinuz", "initramfs.img", "root=LABEL=root rw", "boot.efi");
-//! build_uki(&config)?;
-//! ```
 
 use anyhow::{bail, Context, Result};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 /// Configuration for building a UKI.
@@ -57,16 +49,6 @@ impl UkiConfig {
             output: output.into(),
             os_release: None,
         }
-    }
-
-    /// Set OS release branding.
-    pub fn with_os_release(mut self, name: &str, id: &str, version: &str) -> Self {
-        self.os_release = Some(OsRelease {
-            name: name.to_string(),
-            id: id.to_string(),
-            version: version.to_string(),
-        });
-        self
     }
 }
 
@@ -121,12 +103,12 @@ pub fn build_uki(config: &UkiConfig) -> Result<()> {
         }
     }
 
-    // Write cmdline to temp file (ukify reads from file with @ prefix)
-    let cmdline_file = config.output.with_extension("cmdline");
+    // ukify reads the cmdline and os-release from files (`@path`).
+    let scratch = tempfile::tempdir().context("creating ukify scratch directory")?;
+    let cmdline_file = scratch.path().join("cmdline");
     std::fs::write(&cmdline_file, &config.cmdline)
         .with_context(|| format!("Failed to write cmdline file: {}", cmdline_file.display()))?;
 
-    // Build ukify command
     let mut cmd = Command::new("ukify");
     cmd.arg("build")
         .args(["--linux", &config.kernel.to_string_lossy()])
@@ -134,28 +116,16 @@ pub fn build_uki(config: &UkiConfig) -> Result<()> {
         .args(["--cmdline", &format!("@{}", cmdline_file.display())])
         .args(["--output", &config.output.to_string_lossy()]);
 
-    // Write os-release if provided
-    let os_release_file = if let Some(ref os_release) = config.os_release {
-        let path = config.output.with_extension("os-release");
+    if let Some(ref os_release) = config.os_release {
+        let path = scratch.path().join("os-release");
         std::fs::write(&path, os_release.to_content())
             .with_context(|| format!("Failed to write os-release file: {}", path.display()))?;
         cmd.args(["--os-release", &format!("@{}", path.display())]);
-        Some(path)
-    } else {
-        None
-    };
-
-    // Run ukify
-    let output = cmd.output().context(
-        "Failed to execute 'ukify'. Is systemd-ukify installed?\n\
-         Install with: sudo dnf install systemd-ukify",
-    )?;
-
-    // Cleanup temp files regardless of result
-    let _ = std::fs::remove_file(&cmdline_file);
-    if let Some(path) = os_release_file {
-        let _ = std::fs::remove_file(path);
     }
+
+    let output = cmd
+        .output()
+        .context("Failed to execute 'ukify' (systemd's UKI builder); is it installed?")?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -167,29 +137,4 @@ pub fn build_uki(config: &UkiConfig) -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Build a UKI with minimal arguments.
-///
-/// Convenience wrapper around [`build_uki`] for simple cases.
-pub fn build_uki_simple(kernel: &Path, initrd: &Path, cmdline: &str, output: &Path) -> Result<()> {
-    let config = UkiConfig::new(kernel, initrd, cmdline, output);
-    build_uki(&config)
-}
-
-/// Build a UKI with OS branding.
-///
-/// Convenience wrapper that includes OS release information.
-pub fn build_uki_branded(
-    kernel: &Path,
-    initrd: &Path,
-    cmdline: &str,
-    output: &Path,
-    os_name: &str,
-    os_id: &str,
-    os_version: &str,
-) -> Result<()> {
-    let config =
-        UkiConfig::new(kernel, initrd, cmdline, output).with_os_release(os_name, os_id, os_version);
-    build_uki(&config)
 }

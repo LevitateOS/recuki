@@ -7,7 +7,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
 
-use recuki::{build_uki, UkiConfig};
+use recuki::{build_uki, OsRelease, UkiConfig};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -25,8 +25,7 @@ EXAMPLES:
            -o levitateos.efi
 
 REQUIREMENTS:
-    Requires 'ukify' from systemd-ukify package.
-    Install with: sudo dnf install systemd-ukify
+    Requires 'ukify' from systemd.
 "
 )]
 struct Args {
@@ -47,15 +46,15 @@ struct Args {
     output: PathBuf,
 
     /// OS name for boot menu display (e.g., "LevitateOS")
-    #[arg(long = "os-name")]
+    #[arg(long = "os-name", requires_all = ["os_id", "os_version"])]
     os_name: Option<String>,
 
     /// OS identifier (e.g., "levitateos")
-    #[arg(long = "os-id")]
+    #[arg(long = "os-id", requires_all = ["os_name", "os_version"])]
     os_id: Option<String>,
 
     /// OS version (e.g., "1.0")
-    #[arg(long = "os-version")]
+    #[arg(long = "os-version", requires_all = ["os_name", "os_id"])]
     os_version: Option<String>,
 
     /// Quiet mode - only print errors
@@ -66,14 +65,10 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    // Build config
     let mut config = UkiConfig::new(&args.kernel, &args.initrd, &args.cmdline, &args.output);
 
-    // Add OS branding if all three are provided
     if let (Some(name), Some(id), Some(version)) = (&args.os_name, &args.os_id, &args.os_version) {
-        config = config.with_os_release(name, id, version);
-    } else if args.os_name.is_some() || args.os_id.is_some() || args.os_version.is_some() {
-        eprintln!("Warning: Partial OS release info provided. Need all of --os-name, --os-id, and --os-version for branding.");
+        config.os_release = Some(OsRelease::new(name, id, version));
     }
 
     if !args.quiet {
