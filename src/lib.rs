@@ -128,16 +128,20 @@ pub fn build_uki(config: &UkiConfig) -> Result<()> {
 
     let mut cmd = Command::new("ukify");
     cmd.arg("build")
-        .args(["--linux", &config.kernel.to_string_lossy()])
-        .args(["--initrd", &config.initrd.to_string_lossy()])
-        .args(["--cmdline", &format!("@{}", cmdline_file.display())])
-        .args(["--output", &config.output.to_string_lossy()]);
+        .arg("--linux")
+        .arg(&config.kernel)
+        .arg("--initrd")
+        .arg(&config.initrd)
+        .arg("--cmdline")
+        .arg(at_file(&cmdline_file))
+        .arg("--output")
+        .arg(&config.output);
 
     if let Some(ref os_release) = config.os_release {
         let path = scratch.path().join("os-release");
         std::fs::write(&path, os_release.to_content())
             .with_context(|| format!("Failed to write os-release file: {}", path.display()))?;
-        cmd.args(["--os-release", &format!("@{}", path.display())]);
+        cmd.arg("--os-release").arg(at_file(&path));
     }
 
     let output = cmd
@@ -145,13 +149,22 @@ pub fn build_uki(config: &UkiConfig) -> Result<()> {
         .context("Failed to execute 'ukify' (systemd's UKI builder); is it installed?")?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        bail!(
-            "ukify failed (exit code {}):\n{}",
-            output.status.code().unwrap_or(-1),
-            stderr
-        );
+        use std::os::unix::process::ExitStatusExt;
+        let status = match (output.status.code(), output.status.signal()) {
+            (Some(code), _) => format!("exit code {code}"),
+            (None, Some(signal)) => format!("killed by signal {signal}"),
+            (None, None) => output.status.to_string(),
+        };
+        bail!("ukify failed ({status}):\n{}", String::from_utf8_lossy(&output.stderr));
     }
 
     Ok(())
+}
+
+/// ukify's `@<path>` argument (read the value from the file), with the path's
+/// bytes as they are.
+fn at_file(path: &std::path::Path) -> std::ffi::OsString {
+    let mut arg = std::ffi::OsString::from("@");
+    arg.push(path);
+    arg
 }
